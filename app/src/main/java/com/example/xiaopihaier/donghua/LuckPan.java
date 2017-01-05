@@ -145,6 +145,8 @@ public class LuckPan extends SurfaceView implements SurfaceHolder.Callback, Runn
         isRunning = true;
         t = new Thread(this);
         t.start();
+
+
     }
 
     @Override
