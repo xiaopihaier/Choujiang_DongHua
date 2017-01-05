@@ -9,9 +9,11 @@ import android.graphics.Path;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.widget.Toast;
 
 /**
  * Created by 背书包的小屁孩儿 on 17-1-4.
@@ -38,7 +40,7 @@ public class LuckPan extends SurfaceView implements SurfaceHolder.Callback, Runn
     /**
      * 奖项的图片
      */
-    private int[] mImgs = new int[]{R.mipmap.danfan, R.mipmap.ipad, R.mipmap.iphone, R.mipmap.xiaolian, R.mipmap.xiaolian, R.mipmap.fuzhuang};
+    private int[] mImgs = new int[]{R.mipmap.danfan, R.mipmap.ipad, R.mipmap.xiaolian, R.mipmap.iphone, R.mipmap.fuzhuang, R.mipmap.xiaolian};
     /**
      * 与图片对应的bitmap数组
      */
@@ -84,7 +86,7 @@ public class LuckPan extends SurfaceView implements SurfaceHolder.Callback, Runn
      * 滚动的速度
      */
     private double mSpeed;
-    private volatile int mStartAngle = 0;
+    private volatile float mStartAngle = 0;
     /**
      * 判断是否点击了停止按钮
      */
@@ -111,10 +113,10 @@ public class LuckPan extends SurfaceView implements SurfaceHolder.Callback, Runn
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         int width = Math.min(getMeasuredWidth(), getMeasuredHeight());
         mPadding = getPaddingLeft();
-        //半径
+        //直径
         mRadius = width - mPadding * 2;
         //中心点
-        mCenter = mRadius / 2;
+        mCenter = width / 2;
 
         setMeasuredDimension(width, width);
     }
@@ -195,6 +197,15 @@ public class LuckPan extends SurfaceView implements SurfaceHolder.Callback, Runn
                     drawIcon(tmpAngel, mImgsBitmap[i]);
                     tmpAngel += sweepAngle;
                 }
+                mStartAngle += mSpeed;
+                //如果点击了停止按钮
+                if (isShouldEnd) {
+                    mSpeed -= 1;
+                }
+                if (mSpeed <= 0) {
+                    mSpeed = 0;
+                    isShouldEnd = false;
+                }
             }
         } catch (Exception e) {
         } finally {
@@ -202,6 +213,58 @@ public class LuckPan extends SurfaceView implements SurfaceHolder.Callback, Runn
                 mHolder.unlockCanvasAndPost(mCanvas);
             }
         }
+    }
+
+    /**
+     * 点击启动旋转
+     */
+    public void luckyStart(int index) {
+        //计算每一项角度
+        float angle = 360 / mItemCount;
+        //计算每一项中奖范围(当前index)
+        //1->150~210
+        //0->210~270
+        float from = 233 - (index + 1) * angle;
+        float end = from + angle;
+
+        //设置停下来需要旋转的距离
+        float targetFrom = 3 * 360 + from;
+        float targetEnd = 3 * 360 + end;
+
+        /**
+         * v1-0
+         * 且每次-1
+         * (v1+0)*(v1+1)/2=targetFrom
+         */
+        float v1 = (float) (-1 + Math.sqrt((1 + 8 * targetFrom)) / 2);
+        float v2 = (float) (-1 + Math.sqrt((1 + 8 * targetEnd)) / 2);
+
+        mSpeed = v1 + Math.random() * (v2 - v1);
+        if (mSpeed >= 49) {
+            luckyStart(index);
+        } else {
+            return;
+        }
+        Log.i("mSpeed", String.valueOf(mSpeed));
+        isShouldEnd = false;
+    }
+
+    public void luckyEnd() {
+        mStartAngle = 0;
+        isShouldEnd = true;
+    }
+
+    /**
+     * 转盘是否在旋转
+     *
+     * @return
+     */
+    public boolean isStart() {
+        return mSpeed != 0;
+    }
+
+    public boolean isShouldEnd() {
+        return isShouldEnd;
     }
 
     /**
@@ -218,6 +281,9 @@ public class LuckPan extends SurfaceView implements SurfaceHolder.Callback, Runn
 
         int x = (int) (mCenter + mRadius / 2 / 2 * Math.cos(angle));
         int y = (int) (mCenter + mRadius / 2 / 2 * Math.sin(angle));
+        //确定那个图片位置
+        Rect rect = new Rect(x - imgWidth / 2, y - imgWidth / 2, x + imgWidth / 2, y + imgWidth / 2);
+        mCanvas.drawBitmap(bitmap, null, rect, null);
     }
 
     /**
